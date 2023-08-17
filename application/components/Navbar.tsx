@@ -12,32 +12,25 @@ export function Nav() {
 
           <div className="flex ml-3 gap-6">
             <Link
-              href="https://evmkit.com/"
+              href="/"
               target="_blank"
               className="text-white text-base font-medium hover:text-white transition-colors duration-300"
             >
               Home
-            </Link>
-            <Link
-              href="https://docs.evmkit.com/"
-              target="_blank"
-              className="text-white text-base font-medium hover:text-white transition-colors duration-300"
-            >
-              Docs
             </Link>
           </div>
         </div>
 
         <div className="flex gap-4 items-center">
           <Link
-            href="https://github.com/jarrodwatts/evmkit"
+            href="https://github.com/"
             target="_blank"
             className="text-white hover:text-white transition-colors duration-300"
           >
             <Image src="/github.png" width={24} height={24} alt="Github icon" />
           </Link>
           <Link
-            href="https://twitter.com/jarrodwattsdev"
+            href="https://twitter.com/"
             target="_blank"
             className="text-white hover:text-white transition-colors duration-300"
           >
@@ -46,18 +39,6 @@ export function Nav() {
               width={18}
               height={18}
               alt="Twitter icon"
-            />
-          </Link>
-          <Link
-            href="https://discord.com/invite/4eQBm7DDNS"
-            target="_blank"
-            className="text-white hover:text-white transition-colors duration-300"
-          >
-            <Image
-              src="/discord.png"
-              width={24}
-              height={24}
-              alt="Discord icon"
             />
           </Link>
         </div>
