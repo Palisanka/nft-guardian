@@ -74,7 +74,7 @@ const Home: NextPage = () => {
   const connectionStatus = useConnectionStatus();
   const nfts = useEvmWalletNFTs({
     address: address || "",
-    chain: "0x1",
+    chain: "0x5", // TODO: make dynamic
   }).data;
 
   return (
@@ -105,18 +105,19 @@ const Home: NextPage = () => {
           <h2 className="scroll-m-20 pb-2 text-3xl font-semibold tracking-tight transition-colors mt-2">
             My NFTs
           </h2>
-          <p className="leading-7 my-2">
-            Explore the features of EVM Kit below.
-          </p>
         </div>
         <div
           className="border border-gray-700 rounded-lg flex-1 p-8 m-l-3 mt-4 lg:mt-0
           h-96 overflow-y-auto flex flex-wrap"
         >
           {!!nfts ? (
-            nfts?.map((nft) => {
-              if (nft.metadata?.image) return <Item nft={nft} />;
-            })
+            nfts.length === 0 ? (
+              <p className="leading-7 my-2">You don't have any NFTs yet.</p>
+            ) : (
+              nfts?.map((nft) => {
+                if (nft.metadata?.image) return <Item nft={nft} />;
+              })
+            )
           ) : (
             <p className="leading-7 my-2">
               Connect your wallet to see your NFTs.
