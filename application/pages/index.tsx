@@ -32,6 +32,12 @@ const supportedWallets = [
 let provider: ethers.providers.Web3Provider;
 let openseaSDK: OpenSeaSDK;
 
+const getCollectionDetails = async (collectionSlug: string) => {
+  const collection = await openseaSDK.api.getCollection(collectionSlug);
+  console.log("collection : ", collection);
+  return collection;
+};
+
 const getNFTDetails = async (nft: any) => {
   const tokenAddress = nft.tokenAddress._value;
   const tokenId = nft.tokenId;
@@ -41,8 +47,8 @@ const getNFTDetails = async (nft: any) => {
     tokenId,
     1
   );
-  console.log("nftDetails : ", nftDetails);
-  return nftDetails;
+  console.log("nftDetails : ", nftDetails.nft);
+  return nftDetails.nft;
 };
 
 const addListing = async (nft: any, accountAddress: string, price: number) => {
@@ -72,11 +78,11 @@ const Item = (evmNft: any) => {
   const address = useAddress() || "";
   const nft = evmNft.nft._data;
 
-  const handleSubmit = (event: any) => {
+  const handleSubmit = async (event: any) => {
     event.preventDefault();
-    const floorPrice = 1; // TODO: get floor price
-    console.log(nft);
-    // getNFTDetails(nft);
+    const openSeaNft: any = await getNFTDetails(nft);
+    const collection = await getCollectionDetails(openSeaNft.collection);
+    const floorPrice = collection.stats.floor_price;
     if (floorPrice > askedFloorPrice) {
       throw new Error("Floor price must be less than the current price");
     } else {
