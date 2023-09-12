@@ -1,6 +1,5 @@
 import type { NextPage } from "next";
 import { CHAIN } from "../const/chains";
-import { OpenSeaSDK, Chain } from "opensea-js";
 import {
   ConnectWallet,
   ThirdwebProvider,
@@ -11,10 +10,13 @@ import {
   safeWallet,
   walletConnect,
   useAddress,
-  useConnectionStatus,
+  useWallet,
 } from "@thirdweb-dev/react";
 import { useEvmWalletNFTs } from "@moralisweb3/next";
 import { useEffect, useState } from "react";
+import { ethers } from "ethers";
+import { OpenSeaSDK, Chain } from "opensea-js";
+import { EvmNft } from "moralis/common-evm-utils";
 
 const supportedWallets = [
   metamaskWallet(),
@@ -27,13 +29,60 @@ const supportedWallets = [
   }),
 ];
 
+let provider: ethers.providers.Web3Provider;
+let openseaSDK: OpenSeaSDK;
+
+const getNFTDetails = async (nft: any) => {
+  const tokenAddress = nft.tokenAddress._value;
+  const tokenId = nft.tokenId;
+  const nftDetails = await openseaSDK.api.getNFT(
+    Chain.Goerli,
+    tokenAddress,
+    tokenId,
+    1
+  );
+  console.log("nftDetails : ", nftDetails);
+  return nftDetails;
+};
+
+const addListing = async (nft: any, accountAddress: string, price: number) => {
+  const tokenAddress = nft.tokenAddress._value;
+  const tokenId = nft.tokenId;
+
+  try {
+    const expirationTime = Math.round(Date.now() / 1000 + 60 * 60 * 24);
+    const listing = await openseaSDK.createSellOrder({
+      asset: {
+        tokenId,
+        tokenAddress,
+      },
+      accountAddress: accountAddress || "0x",
+      startAmount: price,
+      expirationTime,
+    });
+    console.log("listing : ", listing);
+    return listing;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 const Item = (evmNft: any) => {
-  const [floorValue, setFloorValue] = useState(0);
-  const nft = evmNft.nft;
+  const [askedFloorPrice, setFloorValue] = useState(0);
+  const address = useAddress() || "";
+  const nft = evmNft.nft._data;
 
   const handleSubmit = (event: any) => {
     event.preventDefault();
-    console.log(floorValue);
+    const floorPrice = 1; // TODO: get floor price
+    console.log(nft);
+    // getNFTDetails(nft);
+    if (floorPrice > askedFloorPrice) {
+      throw new Error("Floor price must be less than the current price");
+    } else {
+      // TODO : start cron job / oracle to check for price updates
+      addListing(nft, address, askedFloorPrice); // TODO: get authorisation without listing rn (add listingTime to list later and then cancel order if needed)
+    }
   };
   return (
     <div
@@ -47,13 +96,13 @@ const Item = (evmNft: any) => {
         {nft.name} - {nft.tokenId}
       </a>
       <img src={nft.metadata?.image} alt={nft.name} className="rounded-lg" />
-      <form onSubmit={handleSubmit} className="flex w-full mt-4">
+      <form onSubmit={(e) => handleSubmit(e, nft)} className="flex w-full mt-4">
         <input
           id={`floorValue-${nft.tokenId}-${nft.name}`}
           name="floorValue"
           type="string"
           className="border-2 border-gray-300 p-4 border-opacity-20 text-black w-3/5"
-          value={floorValue}
+          value={askedFloorPrice}
           onChange={(e) => {
             setFloorValue(e.target.value);
           }}
@@ -71,14 +120,30 @@ const Item = (evmNft: any) => {
 
 const Home: NextPage = () => {
   const address = useAddress();
-  const nfts = useEvmWalletNFTs({
+  const wallet = useWallet();
+  const nfts: EvmNft[] | undefined = useEvmWalletNFTs({
     address: address || "",
     chain: "0x5", // TODO: make dynamic
   }).data;
 
   useEffect(() => {
+    provider = new ethers.providers.Web3Provider(
+      window.ethereum as any,
+      Chain.Goerli
+    );
+    openseaSDK = new OpenSeaSDK(provider, {
+      chain: Chain.Goerli,
+      // apiKey: "", // only needed for mainnet
+    });
+  }, []);
+
+  useEffect(() => {
     console.log("Address changed:", address); // not working -> use address or config failed
   }, [address]);
+
+  useEffect(() => {
+    console.log("wallet changed:", wallet); // not working too
+  }, [wallet]);
 
   return (
     <ThirdwebProvider
