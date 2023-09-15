@@ -1,17 +1,5 @@
 import type { NextPage } from "next";
-import { CHAIN } from "../const/chains";
-import {
-  ConnectWallet,
-  ThirdwebProvider,
-  coinbaseWallet,
-  localWallet,
-  magicLink,
-  metamaskWallet,
-  safeWallet,
-  walletConnect,
-  useAddress,
-  useWallet,
-} from "@thirdweb-dev/react";
+import { Web3Button } from "@web3modal/react";
 import { useEvmWalletNFTs } from "@moralisweb3/next";
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
@@ -34,21 +22,11 @@ import {
 } from "@opensea/seaport-js/lib/types";
 import { CROSS_CHAIN_SEAPORT_V1_5_ADDRESS } from "@opensea/seaport-js/lib/constants";
 import { createClient } from "@supabase/supabase-js";
+import { useAccount } from "wagmi";
 
 const sb_url = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
 const sb_anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
 const supabase = createClient(sb_url, sb_anon);
-
-const supportedWallets = [
-  metamaskWallet(),
-  coinbaseWallet(),
-  walletConnect(),
-  localWallet(),
-  safeWallet(),
-  magicLink({
-    apiKey: process.env.NEXT_PUBLIC_MAGIC_LINK_API_KEY as string,
-  }),
-];
 
 let provider: ethers.providers.Web3Provider;
 let openseaSDK: OpenSeaSDK;
@@ -163,9 +141,13 @@ async function askUserToSignOrder(
 }
 
 const Item = (evmNft: any) => {
-  const [targetFloorPrice, setFloorValue] = useState(0);
-  const address = useAddress() || "";
+  const [targetFloorPrice, setTargetFloorPrice] = useState(0);
+  const { address } = useAccount();
   const nft = evmNft.nft._data;
+
+  if (!nft || !address) {
+    return null;
+  }
 
   const handleSubmit = async (event: any) => {
     event.preventDefault();
@@ -207,6 +189,7 @@ const Item = (evmNft: any) => {
       // TODO: add user management with rls + link an order to an eth address + remove the public insert on rls
       // TODO: encrypt sigature
       // TODO: basic error handling
+      // TODO: handle types
     }
   };
   return (
@@ -230,7 +213,7 @@ const Item = (evmNft: any) => {
           value={targetFloorPrice}
           onChange={(e) => {
             // @ts-ignore
-            setFloorValue(e.target.value);
+            setTargetFloorPrice(e.target.value);
           }}
         />
         <button
@@ -245,8 +228,7 @@ const Item = (evmNft: any) => {
 };
 
 const Home: NextPage = () => {
-  const address = useAddress();
-  const wallet = useWallet();
+  const { address } = useAccount();
   const nfts: EvmNft[] | undefined = useEvmWalletNFTs({
     address: address || "",
     chain: "0x5", // TODO: make dynamic
@@ -254,7 +236,8 @@ const Home: NextPage = () => {
 
   useEffect(() => {
     provider = new ethers.providers.Web3Provider(
-      window.ethereum as any,
+      // @ts-ignore
+      window.ethereum,
       Chain.Goerli
     );
     openseaSDK = new OpenSeaSDK(provider, {
@@ -264,20 +247,8 @@ const Home: NextPage = () => {
     seaport = new Seaport(provider);
   }, []);
 
-  useEffect(() => {
-    console.log("Address changed:", address); // not working -> use address or config failed
-  }, [address]);
-
-  useEffect(() => {
-    console.log("wallet changed:", wallet); // not working too
-  }, [wallet]);
-
   return (
-    <ThirdwebProvider
-      supportedWallets={supportedWallets}
-      activeChain={CHAIN}
-      clientId={process.env.NEXT_PUBLIC_THIRDWEB_API_KEY}
-    >
+    <div>
       <div className="w-full mx-auto pr-8 pl-8 max-w-7xl relative pb-10 mt-32">
         <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-4">
           NFT Guardian{" "}
@@ -289,12 +260,11 @@ const Home: NextPage = () => {
             {/* add StopLoss to your NFTs */}
           </span>
         </h1>
-        <p className="text-xl text-muted-foreground">
+        <p className="text-xl text-muted-foreground mb-4">
           Add StopLoss to your NFTs
         </p>
-        <div className="flex flex-row items-center gap-4 pt-6 pb-16 ">
-          <ConnectWallet />
-        </div>
+        <Web3Button />
+        <div className="flex flex-row items-center gap-4 pt-6 pb-16 "></div>
 
         <div className="flex flex-col w-full">
           <div className="flex flex-col items-start justify-start w-full md:w-96 pr-8">
@@ -323,7 +293,7 @@ const Home: NextPage = () => {
           </div>
         </div>
       </div>
-    </ThirdwebProvider>
+    </div>
   );
 };
 

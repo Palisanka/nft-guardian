@@ -1,53 +1,42 @@
-This is an [EVM Kit](https://evmkit.com/) project bootstrapped with `npx evmkit create`.
+# NFT Guardian
 
-## Getting Started
+Add StopLoss to your NFTs, no private keys, no weird contract, only OpenSea's contract and the signature
 
-Open the project in [Visual Studio Code](https://code.visualstudio.com/).
-The repository comes with a set of [recommended extensions](https://github.com/jarrodwatts/evmkit/blob/main/template/.vscode/extensions.json)
-for building web3 apps; when you open the project, VS Code will prompt you to install them.
-For the best IDE experience, it's recommended to install these extensions.
+## Table of Contents
+
+- [NFT Guardian](#nft-guardian)
+  - [Table of Contents](#table-of-contents)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Contributing](#contributing)
+  - [License](#license)
 
 ## Installation
 
-The application is split into two directories, `application`, and `contracts`; for the frontend and smart contracts respectively.
+1. Clone the repository: `git clone <repository_url>`
+2. Go into application folder : `cd application`
+3. Install deps : `yarn`
 
-The recommended way to use the IDE for this setup is to open a new [split terminal](https://code.visualstudio.com/docs/terminal/basics#:~:text=Multiple%20terminals%20can%20be%20placed,tab%20on%20the%20terminal%20panel.)
-inside your VS Code window; one for each directory.
-This way, you can work simultaneously on the frontend and smart contracts.
+ps : contract folder is not used
 
-First, install the dependencies for each directory. See the sections below for more information:
+## Usage
 
-1. [application](#application) - setup the frontend application
-2. [contracts](#contracts) - setup the smart contracts
+1. Run the application: `yarn dev`
+2. Open your browser and navigate to `http://localhost:3000`
 
-### application
+Thx to jarrodwatts for the [EVM kit](https://github.com/jarrodwatts/evmkit) starter template.
+Check it if you want to learn more
 
-```bash
-# 1. Change directory to the application folder
-cd application
+## Contributing
 
-# 2. Install dependencies
-yarn
+Contributions are welcome! To contribute to this project, please follow these steps:
 
-# 3. Start the application
-yarn dev
-```
+1. Fork the repository
+2. Create a new branch: `git checkout -b feature/your-feature-name`
+3. Commit your changes: `git commit -am 'Add some feature'`
+4. Push to the branch: `git push origin feature/your-feature-name`
+5. Submit a pull request
 
-### contracts
+## License
 
-```bash
-# 1. Change directory to the contracts folder
-cd contracts
-
-# 2. Install dependencies
-yarn
-
-# 3. Build the contracts (optional)
-yarn build
-```
-
-You'll now be able to view your application at [http://localhost:3000](http://localhost:3000).
-
-## Learn More
-
-To learn more about EVM Kit, take a look at the [documentation](https://docs.evmkit.com/).
+This project is licensed under the [GPLv3 License](LICENSE).
