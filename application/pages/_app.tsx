@@ -1,12 +1,31 @@
-import { ThirdwebProvider } from "@thirdweb-dev/react";
-import { CHAIN } from "../const/chains";
 import { Inter } from "next/font/google";
 import { Nav } from "../components/Navbar";
 import Head from "next/head";
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
-
 const inter = Inter({ subsets: ["latin"] });
+import {
+  EthereumClient,
+  w3mConnectors,
+  w3mProvider,
+} from "@web3modal/ethereum";
+import { Web3Modal } from "@web3modal/react";
+import { configureChains, createConfig, WagmiConfig } from "wagmi";
+import { goerli } from "wagmi/chains";
+
+const chains = [goerli];
+const walletConnectProjectId = process.env
+  .NEXT_PUBLIC_WALLECT_CONNECT_ID as string;
+
+const { publicClient } = configureChains(chains, [
+  w3mProvider({ projectId: walletConnectProjectId }),
+]);
+const wagmiConfig = createConfig({
+  autoConnect: true,
+  connectors: w3mConnectors({ projectId: walletConnectProjectId, chains }),
+  publicClient,
+});
+const ethereumClient = new EthereumClient(wagmiConfig, chains);
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
@@ -18,19 +37,14 @@ function MyApp({ Component, pageProps }: AppProps) {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main>
-        <ThirdwebProvider
-          // Set active chain for app
-          activeChain={CHAIN}
-          // Auth (SIWE) configuration
-          authConfig={{
-            domain: process.env.NEXT_PUBLIC_AUTH_DOMAIN || "evmkit.com", // Your website domain
-            authUrl: "/api/auth", // API Route (default is - pages/api/auth/[...thirdweb].ts)
-          }}
-          clientId={process.env.NEXT_PUBLIC_THIRDWEB_API_KEY}
-        >
+        <WagmiConfig config={wagmiConfig}>
           <Nav />
           <Component {...pageProps} />
-        </ThirdwebProvider>
+          <Web3Modal
+            projectId={walletConnectProjectId}
+            ethereumClient={ethereumClient}
+          />
+        </WagmiConfig>
       </main>
     </div>
   );
