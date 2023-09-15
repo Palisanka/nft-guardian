@@ -37,8 +37,6 @@ import { createClient } from "@supabase/supabase-js";
 
 const sb_url = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
 const sb_anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
-console.log("sb_url : ", sb_url);
-console.log("sb_anon : ", sb_anon);
 const supabase = createClient(sb_url, sb_anon);
 
 const supportedWallets = [
@@ -231,7 +229,8 @@ const Item = (evmNft: any) => {
           className="border-2 border-gray-300 p-4 border-opacity-20 text-black w-3/5"
           value={targetFloorPrice}
           onChange={(e) => {
-            setFloorValue(Number(e.target.value));
+            // @ts-ignore
+            setFloorValue(e.target.value);
           }}
         />
         <button
