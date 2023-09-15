@@ -1,6 +1,6 @@
 {
-  "name": "application",
-  "license": "MIT",
+  "name": "nft-guardian",
+  "license": "GPLv3",
   "version": "0.1.0",
   "private": true,
   "scripts": {
