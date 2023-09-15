@@ -1,5 +1,4 @@
 import type { NextPage } from "next";
-import { CHAIN } from "../const/chains";
 import { Web3Button } from "@web3modal/react";
 import { useEvmWalletNFTs } from "@moralisweb3/next";
 import { useEffect, useState } from "react";
@@ -23,7 +22,7 @@ import {
 } from "@opensea/seaport-js/lib/types";
 import { CROSS_CHAIN_SEAPORT_V1_5_ADDRESS } from "@opensea/seaport-js/lib/constants";
 import { createClient } from "@supabase/supabase-js";
-import { useAccount, useConnect } from "wagmi";
+import { useAccount } from "wagmi";
 
 const sb_url = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
 const sb_anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
@@ -142,7 +141,7 @@ async function askUserToSignOrder(
 }
 
 const Item = (evmNft: any) => {
-  const [targetFloorPrice, setFloorValue] = useState(0);
+  const [targetFloorPrice, setTargetFloorPrice] = useState(0);
   const { address } = useAccount();
   const nft = evmNft.nft._data;
 
@@ -190,6 +189,7 @@ const Item = (evmNft: any) => {
       // TODO: add user management with rls + link an order to an eth address + remove the public insert on rls
       // TODO: encrypt sigature
       // TODO: basic error handling
+      // TODO: handle types
     }
   };
   return (
@@ -212,8 +212,8 @@ const Item = (evmNft: any) => {
           className="border-2 border-gray-300 p-4 border-opacity-20 text-black w-3/5"
           value={targetFloorPrice}
           onChange={(e) => {
-            // ts-ignore
-            setFloorValue(e.target.value);
+            // @ts-ignore
+            setTargetFloorPrice(e.target.value);
           }}
         />
         <button
@@ -230,13 +230,14 @@ const Item = (evmNft: any) => {
 const Home: NextPage = () => {
   const { address } = useAccount();
   const nfts: EvmNft[] | undefined = useEvmWalletNFTs({
-    address: address || "", // TODO
+    address: address || "",
     chain: "0x5", // TODO: make dynamic
   }).data;
 
   useEffect(() => {
     provider = new ethers.providers.Web3Provider(
-      window.ethereum as any,
+      // @ts-ignore
+      window.ethereum,
       Chain.Goerli
     );
     openseaSDK = new OpenSeaSDK(provider, {
