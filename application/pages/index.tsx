@@ -17,6 +17,29 @@ import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { OpenSeaSDK, Chain } from "opensea-js";
 import { EvmNft } from "moralis/common-evm-utils";
+import { Seaport } from "@opensea/seaport-js";
+import {
+  ItemType,
+  OPENSEA_CONDUIT_KEY,
+  OrderType,
+} from "@opensea/seaport-js/lib/constants";
+import { generateRandomSalt } from "@opensea/seaport-js/lib/utils/order";
+import SeaportABI from "../abi/seaport_1-5.json";
+import {
+  ConsiderationItem,
+  OfferItem,
+  Order,
+  OrderComponents,
+  OrderParameters,
+} from "@opensea/seaport-js/lib/types";
+import { CROSS_CHAIN_SEAPORT_V1_5_ADDRESS } from "@opensea/seaport-js/lib/constants";
+import { createClient } from "@supabase/supabase-js";
+
+const sb_url = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+const sb_anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+console.log("sb_url : ", sb_url);
+console.log("sb_anon : ", sb_anon);
+const supabase = createClient(sb_url, sb_anon);
 
 const supportedWallets = [
   metamaskWallet(),
@@ -31,6 +54,9 @@ const supportedWallets = [
 
 let provider: ethers.providers.Web3Provider;
 let openseaSDK: OpenSeaSDK;
+let seaport: Seaport;
+const SEAPORT_CONTRACT_ADDRESS = CROSS_CHAIN_SEAPORT_V1_5_ADDRESS;
+const OPENSEA_FEE_RECIPIENT = "0x0000a26b00c1F0DF003000390027140000fAa719"; // TODO: find if exported somewhere else than seaport-gossip
 
 const getCollectionDetails = async (collectionSlug: string) => {
   const collection = await openseaSDK.api.getCollection(collectionSlug);
@@ -51,43 +77,138 @@ const getNFTDetails = async (nft: any) => {
   return nftDetails.nft;
 };
 
-const addListing = async (nft: any, accountAddress: string, price: number) => {
-  const tokenAddress = nft.tokenAddress._value;
-  const tokenId = nft.tokenId;
+/**
+ * Asks the user to sign an order.
+ * (only for ETH tokens, only on OpenSea with 2.5% fees)
+ *
+ * @param {ethers.providers.Web3Provider} provider - The Web3 provider.
+ * @param {string} address - The user's address.
+ * @param {any} nft - The NFT to sell.
+ * @param {number} targetFloorPrice - The target floor price.
+ * @return {Promise<{ orderComponents: OrderComponents; signature: string }>} - An object containing the order components and the signature.
+ */
+async function askUserToSignOrder(
+  provider: ethers.providers.Web3Provider,
+  address: string,
+  nft: any,
+  targetFloorPrice: number
+) {
+  const offerer = address;
+  const targetPrice = targetFloorPrice;
+  const startTime = 0;
+  const endTime = Math.round(Date.now() / 1000 + 60 * 60 * 24 * 30); // 30 days
+  const salt = generateRandomSalt();
+  const seaportContract = new ethers.Contract(
+    SEAPORT_CONTRACT_ADDRESS,
+    SeaportABI,
+    provider.getSigner()
+  );
+  const counter = await seaportContract.getCounter(offerer);
 
-  try {
-    const expirationTime = Math.round(Date.now() / 1000 + 60 * 60 * 24);
-    const listing = await openseaSDK.createSellOrder({
-      asset: {
-        tokenId,
-        tokenAddress,
-      },
-      accountAddress: accountAddress || "0x",
-      startAmount: price,
-      expirationTime,
-    });
-    console.log("listing : ", listing);
-    return listing;
-  } catch (error) {
-    console.log(error);
-  }
-};
+  const offer: OfferItem[] = [
+    {
+      // NFT TO SELL
+      itemType: ItemType.ERC721,
+      token: nft.tokenAddress._value,
+      identifierOrCriteria: nft.tokenId,
+      startAmount: "1",
+      endAmount: "1",
+    },
+  ];
+
+  const considerationData: ConsiderationItem[] = [
+    {
+      // USER CONSIDERATION
+      itemType: ItemType.NATIVE,
+      token: ethers.constants.AddressZero,
+      startAmount: ethers.utils.parseEther(targetPrice.toString()).toString(),
+      endAmount: ethers.utils.parseEther(targetPrice.toString()).toString(),
+      recipient: offerer,
+      identifierOrCriteria: "0",
+    },
+    {
+      // SEAPORT FEES
+      itemType: ItemType.NATIVE,
+      token: ethers.constants.AddressZero,
+      identifierOrCriteria: "0",
+      startAmount: ethers.utils
+        .parseEther(((targetPrice * 2.5) / 100).toString())
+        .toString(),
+      endAmount: ethers.utils
+        .parseEther(((targetPrice * 2.5) / 100).toString())
+        .toString(),
+      recipient: OPENSEA_FEE_RECIPIENT,
+    },
+  ];
+
+  const orderParameters: OrderParameters = {
+    offerer,
+    zone: ethers.constants.AddressZero,
+    offer,
+    consideration: considerationData,
+    orderType: OrderType.FULL_OPEN,
+    totalOriginalConsiderationItems: considerationData.length,
+    salt,
+    startTime,
+    endTime,
+    zoneHash: ethers.constants.HashZero,
+    conduitKey: OPENSEA_CONDUIT_KEY,
+  };
+
+  const orderComponents: OrderComponents = {
+    ...orderParameters,
+    counter: counter.toNumber(),
+  };
+
+  const signature = await seaport.signOrder(orderComponents);
+  return { orderComponents, signature };
+}
 
 const Item = (evmNft: any) => {
-  const [askedFloorPrice, setFloorValue] = useState(0);
+  const [targetFloorPrice, setFloorValue] = useState(0);
   const address = useAddress() || "";
   const nft = evmNft.nft._data;
 
   const handleSubmit = async (event: any) => {
     event.preventDefault();
     const openSeaNft: any = await getNFTDetails(nft);
-    const collection = await getCollectionDetails(openSeaNft.collection);
+    const collectionSlug = openSeaNft.collection;
+    const collection = await getCollectionDetails(collectionSlug);
     const floorPrice = collection.stats.floor_price;
-    if (floorPrice > askedFloorPrice) {
-      throw new Error("Floor price must be less than the current price");
+    if (floorPrice < targetFloorPrice) {
+      throw new Error("Target floor price must be less than the current price");
     } else {
-      // TODO : start cron job / oracle to check for price updates
-      addListing(nft, address, askedFloorPrice); // TODO: get authorisation without listing rn (add listingTime to list later and then cancel order if needed)
+      const {
+        orderComponents,
+        signature,
+      }: {
+        orderComponents: OrderComponents;
+        signature: string;
+      } = await askUserToSignOrder(provider, address, nft, targetFloorPrice);
+
+      const order: Order = {
+        parameters: orderComponents,
+        signature,
+      };
+
+      console.log("order", order);
+
+      const { data, error } = await supabase
+        .from("sl_order")
+        .insert([
+          {
+            order,
+            collection_slug: collectionSlug,
+            target_floor_price: targetFloorPrice,
+          },
+        ])
+        .select();
+      if (error) throw error;
+      console.log("data", data);
+
+      // TODO: add user management with rls + link an order to an eth address + remove the public insert on rls
+      // TODO: encrypt sigature
+      // TODO: basic error handling
     }
   };
   return (
@@ -102,13 +223,13 @@ const Item = (evmNft: any) => {
         {nft.name} - {nft.tokenId}
       </a>
       <img src={nft.metadata?.image} alt={nft.name} className="rounded-lg" />
-      <form onSubmit={(e) => handleSubmit(e, nft)} className="flex w-full mt-4">
+      <form onSubmit={(e) => handleSubmit(e)} className="flex w-full mt-4">
         <input
           id={`floorValue-${nft.tokenId}-${nft.name}`}
           name="floorValue"
           type="string"
           className="border-2 border-gray-300 p-4 border-opacity-20 text-black w-3/5"
-          value={askedFloorPrice}
+          value={targetFloorPrice}
           onChange={(e) => {
             setFloorValue(e.target.value);
           }}
@@ -141,6 +262,7 @@ const Home: NextPage = () => {
       chain: Chain.Goerli,
       // apiKey: "", // only needed for mainnet
     });
+    seaport = new Seaport(provider);
   }, []);
 
   useEffect(() => {
