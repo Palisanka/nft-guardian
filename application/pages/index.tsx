@@ -231,7 +231,7 @@ const Item = (evmNft: any) => {
           className="border-2 border-gray-300 p-4 border-opacity-20 text-black w-3/5"
           value={targetFloorPrice}
           onChange={(e) => {
-            setFloorValue(e.target.value);
+            setFloorValue(Number(e.target.value));
           }}
         />
         <button
@@ -311,8 +311,9 @@ const Home: NextPage = () => {
               nfts.length === 0 ? (
                 <p className="leading-7 my-2">You don't have any NFTs yet.</p>
               ) : (
-                nfts?.map((nft) => {
-                  if (nft.metadata?.image) return <Item nft={nft} />;
+                nfts?.map((nft: any) => {
+                  if (nft.metadata?.image)
+                    return <Item key={nft.tokenId} nft={nft} />;
                 })
               )
             ) : (
