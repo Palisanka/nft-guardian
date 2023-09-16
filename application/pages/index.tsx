@@ -28,6 +28,7 @@ import { Fragment } from "react";
 import { Transition } from "@headlessui/react";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { XMarkIcon } from "@heroicons/react/20/solid";
+import { CheckCircleIcon } from "lucide-react";
 
 const Notification = ({ ...props }) => {
   const [show, setShow] = useState(false);
@@ -63,14 +64,17 @@ const Notification = ({ ...props }) => {
               <div className="p-4">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
-                    {/* <CheckCircleIcon
-                      className="h-6 w-6 text-green-400"
-                      aria-hidden="true"
-                    /> */}
-                    <ExclamationCircleIcon
-                      className="h-6 w-6 text-red-400"
-                      aria-hidden="true"
-                    />
+                    {props.type === "success" ? (
+                      <CheckCircleIcon
+                        className="h-6 w-6 text-green-400"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <ExclamationCircleIcon
+                        className="h-6 w-6 text-red-400"
+                        aria-hidden="true"
+                      />
+                    )}
                   </div>
                   <div className="ml-3 w-0 flex-1 pt-0.5">
                     <p className="text-sm font-medium text-gray-900">
@@ -249,7 +253,10 @@ async function askUserToSignOrder(
 
 const Item = (evmNft: any) => {
   const [targetFloorPrice, setTargetFloorPrice] = useState(0);
-  const [error, setError] = useState<string>("");
+  const [notif, setNotif] = useState<{ message: string; type: string }>({
+    message: "",
+    type: "",
+  });
   const { address } = useAccount();
   const nft = evmNft.nft._data;
 
@@ -263,12 +270,13 @@ const Item = (evmNft: any) => {
     const floorPrice = collection.stats.floor_price;
 
     if (floorPrice < targetFloorPrice) {
-      setError(
-        `Target floor price must be less than the current floor price, it's actually ${floorPrice}eth`
-      );
+      setNotif({
+        message: `Target floor price must be less than the current floor price, it's actually ${floorPrice}eth`,
+        type: "error",
+      });
       // throw new Error("Target floor price must be less than the current price");
     } else {
-      setError("");
+      setNotif({ message: "", type: "" });
       const { orderComponents, signature } = (await askUserToSignOrder(
         provider,
         address,
@@ -292,7 +300,11 @@ const Item = (evmNft: any) => {
           },
         ])
         .select();
-      if (sbError) throw sbError;
+      if (sbError) {
+        throw sbError;
+      } else {
+        setNotif({ message: "Your order has been submitted", type: "success" });
+      }
       console.log("data", data);
 
       // TODO: handle handle opensea fees address in the collection object
@@ -307,7 +319,7 @@ const Item = (evmNft: any) => {
       key={`floorValue-${nft.tokenId}-${nft.name}-${nft.tokenUri}`}
       className="flex flex-col mb-8 rounded-2xl shadow-lg bg-white mr-6"
     >
-      <Notification message={error} />
+      <Notification message={notif.message} type={notif.type} />
       <section className="flex flex-col items-center px-3 py-4">
         <div className="w-full">
           <div className="w-full">
