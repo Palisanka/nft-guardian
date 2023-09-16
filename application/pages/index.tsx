@@ -267,6 +267,7 @@ const Item = (evmNft: any) => {
   const handleSubmit = async (event: any) => {
     event.preventDefault();
     const collection = await getCollectionDetails(nft);
+    console.log("collection", collection);
     const floorPrice = collection.stats.floor_price;
 
     if (floorPrice < targetFloorPrice) {
@@ -317,7 +318,7 @@ const Item = (evmNft: any) => {
   return (
     <div
       key={`floorValue-${nft.tokenId}-${nft.name}-${nft.tokenUri}`}
-      className="flex flex-col mb-8 rounded-2xl shadow-lg bg-white mr-6"
+      className="flex flex-col mb-8 rounded-2xl shadow-lg bg-white w-full mr-4 md:w-[47%] lg:w-[30%]"
     >
       <Notification message={notif.message} type={notif.type} />
       <section className="flex flex-col items-center px-3 py-4">
@@ -331,11 +332,21 @@ const Item = (evmNft: any) => {
             #{nft.tokenId}
           </span>
         </div>
-        <img
-          src={nft.metadata?.image}
-          alt={nft.name}
-          className="rounded-full w-2/3"
-        />
+        {nft.metadata?.image.indexOf("ipfs://") === 0 ? (
+          <img
+            src={`https://ipfs.io/ipfs/${
+              nft.metadata?.image.split("ipfs://")[1]
+            }`}
+            alt={nft.name}
+            className="rounded-full w-2/3"
+          />
+        ) : (
+          <img
+            src={nft.metadata?.image}
+            alt={nft.name}
+            className="rounded-full w-2/3"
+          />
+        )}
       </section>
       <section>
         <hr className="w-full border-slate-300 border-t-1 my-2 mt-4" />
