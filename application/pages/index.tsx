@@ -269,13 +269,12 @@ const Item = (evmNft: any) => {
       // throw new Error("Target floor price must be less than the current price");
     } else {
       setError("");
-      const {
-        orderComponents,
-        signature,
-      }: {
-        orderComponents: OrderComponents;
-        signature: string;
-      } = await askUserToSignOrder(provider, address, nft, targetFloorPrice);
+      const { orderComponents, signature } = (await askUserToSignOrder(
+        provider,
+        address,
+        nft,
+        targetFloorPrice
+      )) as any;
 
       const order: Order = {
         parameters: orderComponents,
